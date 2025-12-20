@@ -9,6 +9,7 @@ import bodyParser from 'body-parser';
 import { checkDb } from './db';
 import { postgresPersistence } from './persistence';
 import authRoutes from './routes/auth';
+import documentsRoutes from './routes/documents';
 // @ts-ignore - CommonJS import for ES module package
 const { setupWSConnection, setPersistence } = require('@y/websocket-server/utils');
 
@@ -21,6 +22,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // API Routes
 app.use('/api', authRoutes);
+app.use('/api/documents', documentsRoutes);
 
 const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
