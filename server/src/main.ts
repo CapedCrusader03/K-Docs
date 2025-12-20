@@ -1,6 +1,10 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
+config({ path: resolve(__dirname, '../../.env') });
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
+import { checkDb } from './db';
 // @ts-ignore - CommonJS import for ES module package
 const { setupWSConnection } = require('@y/websocket-server/utils');
 
@@ -21,7 +25,8 @@ wss.on('connection', (ws, req) => {
 
 const PORT = 1234;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log('Listening');
+  await checkDb();
 });
 

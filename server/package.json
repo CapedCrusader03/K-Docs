@@ -11,8 +11,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/pg": "^8.16.0",
     "@y/websocket-server": "^0.1.1",
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "pg": "^8.16.3",
     "ws": "^8.18.3",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.28"
