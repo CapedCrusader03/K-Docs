@@ -4,12 +4,24 @@ config({ path: resolve(__dirname, '../../.env') });
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
+import cors from 'cors';
+import bodyParser from 'body-parser';
 import { checkDb } from './db';
 import { postgresPersistence } from './persistence';
+import authRoutes from './routes/auth';
 // @ts-ignore - CommonJS import for ES module package
 const { setupWSConnection, setPersistence } = require('@y/websocket-server/utils');
 
 const app = express();
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// API Routes
+app.use('/api', authRoutes);
+
 const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
