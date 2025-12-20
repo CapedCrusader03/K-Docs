@@ -34,6 +34,7 @@ export const Editor = () => {
     const quill = quillRef.current;
     const container = editorRef.current;
 
+    // Cleanup binding first (removes Quill listeners)
     if (binding) {
       try {
         binding.destroy();
@@ -43,8 +44,18 @@ export const Editor = () => {
       bindingRef.current = null;
     }
 
+    // Cleanup provider (closes WebSocket connection)
     if (provider) {
       try {
+        // Disconnect awareness before destroying (removes awareness listeners)
+        if (provider.awareness) {
+          try {
+            provider.awareness.destroy();
+          } catch (e) {
+            // Ignore awareness destroy errors
+          }
+        }
+        // Destroy provider (closes WebSocket and removes all listeners)
         provider.destroy();
       } catch (e) {
         // Ignore errors during cleanup
@@ -52,8 +63,10 @@ export const Editor = () => {
       providerRef.current = null;
     }
 
+    // Cleanup Y.Doc (remove all event listeners)
     if (ydoc) {
       try {
+        // Remove all event listeners by destroying the document
         ydoc.destroy();
       } catch (e) {
         // Ignore errors during cleanup
@@ -61,6 +74,7 @@ export const Editor = () => {
       ydocRef.current = null;
     }
 
+    // Cleanup Quill (remove DOM and listeners)
     if (quill && container) {
       try {
         // Remove Quill's toolbar and editor elements
@@ -132,11 +146,19 @@ export const Editor = () => {
     return cleanup;
   }, [id, navigate]);
 
+  const shareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleShare = async (e: React.FormEvent) => {
     e.preventDefault();
     setShareError('');
     setShareSuccess(false);
     setShareLoading(true);
+
+    // Clear any existing timeout
+    if (shareTimeoutRef.current) {
+      clearTimeout(shareTimeoutRef.current);
+      shareTimeoutRef.current = null;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -168,9 +190,10 @@ export const Editor = () => {
       setShareSuccess(true);
       setShareEmail('');
       // Close modal after 2 seconds
-      setTimeout(() => {
+      shareTimeoutRef.current = setTimeout(() => {
         setShowShareModal(false);
         setShareSuccess(false);
+        shareTimeoutRef.current = null;
       }, 2000);
     } catch (err) {
       setShareError(err instanceof Error ? err.message : 'Failed to share document');
@@ -178,6 +201,16 @@ export const Editor = () => {
       setShareLoading(false);
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (shareTimeoutRef.current) {
+        clearTimeout(shareTimeoutRef.current);
+        shareTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh' }}>
