@@ -5,8 +5,9 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { checkDb } from './db';
+import { postgresPersistence } from './persistence';
 // @ts-ignore - CommonJS import for ES module package
-const { setupWSConnection } = require('@y/websocket-server/utils');
+const { setupWSConnection, setPersistence } = require('@y/websocket-server/utils');
 
 const app = express();
 const server = createServer(app);
@@ -28,5 +29,9 @@ const PORT = 1234;
 server.listen(PORT, async () => {
   console.log('Listening');
   await checkDb();
+  
+  // Set up persistence
+  setPersistence(postgresPersistence);
+  console.log('Persistence enabled');
 });
 
