@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -18,6 +18,13 @@ export const Editor = () => {
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<QuillBinding | null>(null);
+  
+  // Share modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState('');
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   // Cleanup function that captures current values
   const cleanup = () => {
@@ -125,6 +132,252 @@ export const Editor = () => {
     return cleanup;
   }, [id, navigate]);
 
-  return <div ref={editorRef} style={{ minHeight: '500px' }}></div>;
+  const handleShare = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShareError('');
+    setShareSuccess(false);
+    setShareLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      if (!id) {
+        setShareError('Document ID is missing');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:1234/api/documents/${id}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ email: shareEmail })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to share document');
+      }
+
+      setShareSuccess(true);
+      setShareEmail('');
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShowShareModal(false);
+        setShareSuccess(false);
+      }, 2000);
+    } catch (err) {
+      setShareError(err instanceof Error ? err.message : 'Failed to share document');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative', minHeight: '100vh' }}>
+      {/* Share Button */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 1000
+      }}>
+        <button
+          onClick={() => {
+            setShowShareModal(true);
+            setShareError('');
+            setShareSuccess(false);
+          }}
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            backgroundColor: '#4285f4',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          Share
+        </button>
+      </div>
+
+      {/* Back to Dashboard Button */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        left: '20px',
+        zIndex: 1000
+      }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            backgroundColor: '#f1f1f1',
+            color: '#333',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          ← Back
+        </button>
+      </div>
+
+      {/* Editor */}
+      <div ref={editorRef} style={{ minHeight: '500px', paddingTop: '60px' }}></div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 2000
+          }}
+          onClick={() => {
+            if (!shareLoading) {
+              setShowShareModal(false);
+              setShareEmail('');
+              setShareError('');
+              setShareSuccess(false);
+            }
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '8px',
+              minWidth: '400px',
+              maxWidth: '500px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Share Document</h2>
+            
+            <form onSubmit={handleShare}>
+              <div style={{ marginBottom: '20px' }}>
+                <label
+                  htmlFor="share-email"
+                  style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: '500',
+                    color: '#333'
+                  }}
+                >
+                  Email Address
+                </label>
+                <input
+                  id="share-email"
+                  type="email"
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  required
+                  disabled={shareLoading}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {shareError && (
+                <div
+                  style={{
+                    padding: '10px',
+                    backgroundColor: '#fee',
+                    color: '#c33',
+                    borderRadius: '4px',
+                    marginBottom: '15px',
+                    fontSize: '14px'
+                  }}
+                >
+                  {shareError}
+                </div>
+              )}
+
+              {shareSuccess && (
+                <div
+                  style={{
+                    padding: '10px',
+                    backgroundColor: '#efe',
+                    color: '#3c3',
+                    borderRadius: '4px',
+                    marginBottom: '15px',
+                    fontSize: '14px'
+                  }}
+                >
+                  Document shared successfully!
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowShareModal(false);
+                    setShareEmail('');
+                    setShareError('');
+                    setShareSuccess(false);
+                  }}
+                  disabled={shareLoading}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '16px',
+                    backgroundColor: '#f1f1f1',
+                    color: '#333',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    cursor: shareLoading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={shareLoading || !shareEmail}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '16px',
+                    backgroundColor: shareLoading || !shareEmail ? '#ccc' : '#4285f4',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: shareLoading || !shareEmail ? 'not-allowed' : 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  {shareLoading ? 'Sharing...' : 'Invite'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
