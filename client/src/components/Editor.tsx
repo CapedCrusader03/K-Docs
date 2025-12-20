@@ -1,9 +1,13 @@
 import { useEffect, useRef } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
+import QuillCursors from 'quill-cursors';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { QuillBinding } from 'y-quill';
+
+// Register the cursors module
+Quill.register('modules/cursors', QuillCursors);
 
 export const Editor = () => {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -15,9 +19,12 @@ export const Editor = () => {
   useEffect(() => {
     const container = editorRef.current;
     if (container && !quillRef.current) {
-      // Initialize Quill
+      // Initialize Quill with cursors module
       quillRef.current = new Quill(container, {
-        theme: 'snow'
+        theme: 'snow',
+        modules: {
+          cursors: true
+        }
       });
 
       // Initialize Yjs document
@@ -28,9 +35,9 @@ export const Editor = () => {
       const provider = new WebsocketProvider('ws://localhost:1234', 'test-room', ydoc);
       providerRef.current = provider;
 
-      // Bind Yjs to Quill
+      // Bind Yjs to Quill with awareness for user cursors
       const ytext = ydoc.getText('quill');
-      const binding = new QuillBinding(ytext, quillRef.current);
+      const binding = new QuillBinding(ytext, quillRef.current, provider.awareness);
       bindingRef.current = binding;
     }
 

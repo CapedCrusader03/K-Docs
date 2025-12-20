@@ -16,6 +16,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "quill": "^2.0.3",
+    "quill-cursors": "^4.0.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "y-quill": "^1.0.0",
