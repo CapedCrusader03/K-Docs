@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import QuillCursors from 'quill-cursors';
@@ -10,6 +11,8 @@ import { QuillBinding } from 'y-quill';
 Quill.register('modules/cursors', QuillCursors);
 
 export const Editor = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const editorRef = useRef<HTMLDivElement>(null);
   const quillRef = useRef<Quill | null>(null);
   const ydocRef = useRef<Y.Doc | null>(null);
@@ -17,6 +20,18 @@ export const Editor = () => {
   const bindingRef = useRef<QuillBinding | null>(null);
 
   useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    if (!id) {
+      navigate('/');
+      return;
+    }
+
     const container = editorRef.current;
     if (container && !quillRef.current) {
       // Initialize Quill with cursors module
@@ -31,8 +46,8 @@ export const Editor = () => {
       const ydoc = new Y.Doc();
       ydocRef.current = ydoc;
 
-      // Create WebsocketProvider
-      const provider = new WebsocketProvider('ws://localhost:1234', 'test-room', ydoc);
+      // Create WebsocketProvider with document ID from URL
+      const provider = new WebsocketProvider('ws://localhost:1234', id, ydoc);
       providerRef.current = provider;
 
       // Bind Yjs to Quill with awareness for user cursors
@@ -58,7 +73,7 @@ export const Editor = () => {
         quillRef.current = null;
       }
     };
-  }, []);
+  }, [id, navigate]);
 
   return <div ref={editorRef}></div>;
 };
