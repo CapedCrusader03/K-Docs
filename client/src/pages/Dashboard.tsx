@@ -14,6 +14,12 @@ export const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Remove any stray Quill toolbars that might have persisted
+    const strayToolbars = document.querySelectorAll('.ql-toolbar');
+    const strayContainers = document.querySelectorAll('.ql-container');
+    strayToolbars.forEach(toolbar => toolbar.remove());
+    strayContainers.forEach(container => container.remove());
+    
     fetchDocuments();
   }, []);
 
