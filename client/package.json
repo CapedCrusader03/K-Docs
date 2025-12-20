@@ -9,16 +9,19 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/jwt-decode": "^2.2.1",
     "typescript": "~5.9.3",
     "vite": "^7.2.4"
   },
   "dependencies": {
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "jwt-decode": "^4.0.0",
     "quill": "^2.0.3",
     "quill-cursors": "^4.0.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-router-dom": "^7.11.0",
     "y-quill": "^1.0.0",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.28"
