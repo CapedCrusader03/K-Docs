@@ -63,5 +63,65 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// POST /api/documents/:id/share - Share a document with another user
+router.post('/:id/share', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const documentId = req.params.id;
+    const { email } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Check if requester is the owner of the document
+    const ownerCheck = await pool.query(
+      'SELECT role FROM user_documents WHERE user_id = $1 AND document_id = $2',
+      [userId, documentId]
+    );
+
+    if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].role !== 'owner') {
+      return res.status(403).json({ error: 'Only document owners can share documents' });
+    }
+
+    // Find user by email
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const targetUserId = userResult.rows[0].id;
+
+    // Check if user already has access
+    const existingAccess = await pool.query(
+      'SELECT role FROM user_documents WHERE user_id = $1 AND document_id = $2',
+      [targetUserId, documentId]
+    );
+
+    if (existingAccess.rows.length > 0) {
+      return res.status(409).json({ error: 'User already has access to this document' });
+    }
+
+    // Insert into user_documents with role 'editor'
+    await pool.query(
+      'INSERT INTO user_documents (user_id, document_id, role) VALUES ($1, $2, $3)',
+      [targetUserId, documentId, 'editor']
+    );
+
+    res.status(200).json({ message: 'Document shared successfully' });
+  } catch (error) {
+    console.error('Share document error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
 
