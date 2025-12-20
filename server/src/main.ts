@@ -1,9 +1,27 @@
 import express from 'express';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+// @ts-ignore - CommonJS import for ES module package
+const { setupWSConnection } = require('@y/websocket-server/utils');
 
 const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    console.log('Connection established.');
+    wss.emit('connection', ws, request);
+  });
+});
+
+wss.on('connection', (ws, req) => {
+  setupWSConnection(ws, req);
+});
+
 const PORT = 1234;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log('Listening');
 });
 
