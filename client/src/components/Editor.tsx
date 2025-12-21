@@ -133,8 +133,11 @@ export const Editor = () => {
     const ydoc = new Y.Doc();
     ydocRef.current = ydoc;
 
-    // Create WebsocketProvider with document ID from URL
-    const provider = new WebsocketProvider('ws://localhost:1234', id, ydoc);
+    // Create WebsocketProvider with document ID and token
+    // y-websocket may not preserve query params, so we include token in room name
+    // Format: {docId}?token={token}
+    const roomName = `${id}?token=${encodeURIComponent(token)}`;
+    const provider = new WebsocketProvider('ws://localhost:1234', roomName, ydoc);
     providerRef.current = provider;
 
     // Bind Yjs to Quill with awareness for user cursors
@@ -142,8 +145,17 @@ export const Editor = () => {
     const binding = new QuillBinding(ytext, quillRef.current, provider.awareness);
     bindingRef.current = binding;
 
+    // Cleanup on page unload (tab close, browser close, refresh)
+    const handleBeforeUnload = () => {
+      cleanup();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     // Return cleanup function
-    return cleanup;
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanup();
+    };
   }, [id, navigate]);
 
   const shareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
