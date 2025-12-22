@@ -49,3 +49,5 @@ postgres_data/
 .cache/
 
 *.md
+
+*.pem
