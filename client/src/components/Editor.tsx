@@ -358,7 +358,8 @@ export const Editor = () => {
                 setShareError('');
                 setShareSuccess(false);
                 setShareEmail('');
-                setShareRole('editor');
+                // Default role: owners start with editor, editors with viewer
+                setShareRole(userRole === 'owner' ? 'editor' : 'viewer');
               }}
               style={{
                 padding: '8px 16px',
@@ -489,7 +490,9 @@ export const Editor = () => {
                     cursor: shareLoading ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  <option value="editor">Editor (can edit)</option>
+                  {userRole === 'owner' && (
+                    <option value="editor">Editor (can edit)</option>
+                  )}
                   <option value="viewer">Viewer (read-only)</option>
                 </select>
               </div>

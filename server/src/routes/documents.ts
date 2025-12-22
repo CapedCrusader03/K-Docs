@@ -117,14 +117,26 @@ router.post('/:id/share', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Invalid role. Must be "editor" or "viewer"' });
     }
 
-    // Check if requester is the owner of the document
-    const ownerCheck = await pool.query(
+    // Check the requester's role on this document
+    const requesterRoleResult = await pool.query(
       'SELECT role FROM user_documents WHERE user_id = $1 AND document_id = $2',
       [userId, documentId]
     );
 
-    if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].role !== 'owner') {
-      return res.status(403).json({ error: 'Only document owners can share documents' });
+    if (requesterRoleResult.rows.length === 0) {
+      return res.status(403).json({ error: 'You do not have access to this document' });
+    }
+
+    const requesterRole = requesterRoleResult.rows[0].role;
+
+    // Owners can share with both editors and viewers.
+    // Editors can only share viewer access.
+    if (requesterRole === 'editor' && role !== 'viewer') {
+      return res.status(403).json({ error: 'Editors can only share viewer access' });
+    }
+
+    if (!['owner', 'editor'].includes(requesterRole)) {
+      return res.status(403).json({ error: 'Only owners and editors can share documents' });
     }
 
     // Find user by email
