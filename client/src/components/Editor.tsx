@@ -6,6 +6,8 @@ import QuillCursors from 'quill-cursors';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { QuillBinding } from 'y-quill';
+import { API_BASE_URL, WS_BASE_URL } from '../config';
+import { getUserFromToken } from '../utils/auth';
 
 // Register the cursors module
 Quill.register('modules/cursors', QuillCursors);
@@ -19,9 +21,18 @@ export const Editor = () => {
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<QuillBinding | null>(null);
   
+  // User info state
+  const [userEmail, setUserEmail] = useState<string>('');
+  
+  // Document metadata state
+  const [documentTitle, setDocumentTitle] = useState<string>('');
+  const [userRole, setUserRole] = useState<string>('');
+  const [isViewer, setIsViewer] = useState(false);
+  
   // Share modal state
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareEmail, setShareEmail] = useState('');
+  const [shareRole, setShareRole] = useState<'editor' | 'viewer'>('editor');
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState('');
   const [shareSuccess, setShareSuccess] = useState(false);
@@ -99,6 +110,43 @@ export const Editor = () => {
     }
   };
 
+  // Fetch document metadata
+  useEffect(() => {
+    const fetchDocumentMetadata = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token || !id) return;
+
+        const response = await fetch(`${API_BASE_URL}/api/documents/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch document metadata');
+        }
+
+        const data = await response.json();
+        setDocumentTitle(data.title || 'Untitled Document');
+        setUserRole(data.role || 'editor');
+        setIsViewer(data.role === 'viewer');
+      } catch (err) {
+        console.error('Error fetching document metadata:', err);
+      }
+    };
+
+    if (id) {
+      fetchDocumentMetadata();
+    }
+  }, [id, navigate]);
+
   useEffect(() => {
     // Check if user is logged in
     const token = localStorage.getItem('token');
@@ -112,6 +160,11 @@ export const Editor = () => {
       return;
     }
 
+    // Wait for role to be fetched before initializing editor
+    if (userRole === '') {
+      return;
+    }
+
     // Cleanup any existing instances first
     cleanup();
 
@@ -122,23 +175,46 @@ export const Editor = () => {
     container.innerHTML = '';
 
     // Initialize Quill with cursors module
+    // If user is a viewer, make it read-only
     quillRef.current = new Quill(container, {
       theme: 'snow',
       modules: {
         cursors: true
-      }
+      },
+      readOnly: isViewer
     });
 
     // Initialize Yjs document
     const ydoc = new Y.Doc();
     ydocRef.current = ydoc;
 
+    // Get user info
+    const userInfo = getUserFromToken();
+    if (userInfo) {
+      setUserEmail(userInfo.email);
+    }
+
     // Create WebsocketProvider with document ID and token
     // y-websocket may not preserve query params, so we include token in room name
     // Format: {docId}?token={token}
     const roomName = `${id}?token=${encodeURIComponent(token)}`;
-    const provider = new WebsocketProvider('ws://localhost:1234', roomName, ydoc);
+    const provider = new WebsocketProvider(WS_BASE_URL, roomName, ydoc);
     providerRef.current = provider;
+
+    // Set awareness state with user email and color
+    if (userInfo && provider.awareness) {
+      // Generate a random color for the user
+      const colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+        '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52BE80'
+      ];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      
+      provider.awareness.setLocalStateField('user', {
+        name: userInfo.email,
+        color: randomColor
+      });
+    }
 
     // Bind Yjs to Quill with awareness for user cursors
     const ytext = ydoc.getText('quill');
@@ -156,7 +232,7 @@ export const Editor = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       cleanup();
     };
-  }, [id, navigate]);
+  }, [id, navigate, isViewer, userRole]);
 
   const shareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -184,13 +260,13 @@ export const Editor = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:1234/api/documents/${id}/share`, {
+              const response = await fetch(`${API_BASE_URL}/api/documents/${id}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ email: shareEmail })
+        body: JSON.stringify({ email: shareEmail, role: shareRole })
       });
 
       const data = await response.json();
@@ -201,6 +277,7 @@ export const Editor = () => {
 
       setShareSuccess(true);
       setShareEmail('');
+      setShareRole('editor');
       // Close modal after 2 seconds
       shareTimeoutRef.current = setTimeout(() => {
         setShowShareModal(false);
@@ -226,59 +303,94 @@ export const Editor = () => {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh' }}>
-      {/* Share Button */}
+      {/* Top Navigation Bar */}
       <div style={{
         position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 1000
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50px',
+        backgroundColor: '#f8f9fa',
+        borderBottom: '1px solid #e0e0e0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 20px',
+        zIndex: 1000,
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        <button
-          onClick={() => {
-            setShowShareModal(true);
-            setShareError('');
-            setShareSuccess(false);
-          }}
-          style={{
-            padding: '10px 20px',
-            fontSize: '16px',
-            backgroundColor: '#4285f4',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: '500'
-          }}
-        >
-          Share
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              backgroundColor: '#f1f1f1',
+              color: '#333',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            ← Back
+          </button>
+          {documentTitle && (
+            <span style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>
+              {documentTitle}
+            </span>
+          )}
+          {userEmail && (
+            <span style={{ fontSize: '14px', color: '#666', marginLeft: '15px' }}>
+              Logged in as: <strong style={{ color: '#333' }}>{userEmail}</strong>
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {isViewer && (
+            <span style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
+              View Only
+            </span>
+          )}
+          {!isViewer && (
+            <button
+              onClick={() => {
+                setShowShareModal(true);
+                setShareError('');
+                setShareSuccess(false);
+                setShareEmail('');
+                setShareRole('editor');
+              }}
+              style={{
+                padding: '8px 16px',
+                fontSize: '14px',
+                backgroundColor: '#4285f4',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}
+            >
+              Share
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Back to Dashboard Button */}
-      <div style={{
-        position: 'fixed',
-        top: '20px',
-        left: '20px',
-        zIndex: 1000
+      {/* Editor Container - positioned below fixed navigation */}
+      <div style={{ 
+        marginTop: '50px', 
+        minHeight: 'calc(100vh - 50px)',
+        width: '100%',
+        padding: '20px',
+        boxSizing: 'border-box'
       }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            padding: '10px 20px',
-            fontSize: '16px',
-            backgroundColor: '#f1f1f1',
-            color: '#333',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          ← Back
-        </button>
+        <div ref={editorRef} style={{ 
+          minHeight: 'calc(100vh - 90px)',
+          width: '100%',
+          backgroundColor: 'white'
+        }}></div>
       </div>
-
-      {/* Editor */}
-      <div ref={editorRef} style={{ minHeight: '500px', paddingTop: '60px' }}></div>
 
       {/* Share Modal */}
       {showShareModal && (
@@ -347,6 +459,39 @@ export const Editor = () => {
                     boxSizing: 'border-box'
                   }}
                 />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label
+                  htmlFor="share-role"
+                  style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: '500',
+                    color: '#333'
+                  }}
+                >
+                  Permission Level
+                </label>
+                <select
+                  id="share-role"
+                  value={shareRole}
+                  onChange={(e) => setShareRole(e.target.value as 'editor' | 'viewer')}
+                  disabled={shareLoading}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                    backgroundColor: 'white',
+                    cursor: shareLoading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <option value="editor">Editor (can edit)</option>
+                  <option value="viewer">Viewer (read-only)</option>
+                </select>
               </div>
 
               {shareError && (

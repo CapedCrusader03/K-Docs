@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 interface Document {
   id: string;
+  title: string;
   updated_at: string;
   role: string;
 }
@@ -11,6 +13,10 @@ export const Dashboard = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newDocTitle, setNewDocTitle] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,7 +37,7 @@ export const Dashboard = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:1234/api/documents', {
+              const response = await fetch(`${API_BASE_URL}/api/documents`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -56,7 +62,12 @@ export const Dashboard = () => {
     }
   };
 
-  const handleCreateDocument = async () => {
+  const handleCreateDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    setCreateError('');
+    setCreating(true);
+
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -64,12 +75,14 @@ export const Dashboard = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:1234/api/documents', {
+      const title = newDocTitle.trim();
+      const response = await fetch(`${API_BASE_URL}/api/documents`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ title: title || undefined })
       });
 
       if (response.status === 401) {
@@ -79,13 +92,19 @@ export const Dashboard = () => {
       }
 
       if (!response.ok) {
-        throw new Error('Failed to create document');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create document');
       }
 
       const data = await response.json();
+      setShowCreateModal(false);
+      setNewDocTitle('');
+      setCreating(false);
       navigate(`/doc/${data.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create document');
+      console.error('Create document error:', err);
+      setCreateError(err instanceof Error ? err.message : 'Failed to create document');
+      setCreating(false);
     }
   };
 
@@ -104,7 +123,7 @@ export const Dashboard = () => {
         <h1>My Documents</h1>
         <div>
           <button 
-            onClick={handleCreateDocument}
+            onClick={() => setShowCreateModal(true)}
             style={{ 
               padding: '10px 20px', 
               fontSize: '16px', 
@@ -152,13 +171,138 @@ export const Dashboard = () => {
                 e.currentTarget.style.backgroundColor = '#f9f9f9';
               }}
             >
-              <div style={{ fontWeight: 'bold' }}>Document {doc.id.substring(0, 8)}...</div>
+              <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '5px' }}>{doc.title}</div>
               <div style={{ fontSize: '14px', color: '#666' }}>
                 Updated: {new Date(doc.updated_at).toLocaleString()} • Role: {doc.role}
               </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Create Document Modal */}
+      {showCreateModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 2000
+          }}
+          onClick={() => {
+            setShowCreateModal(false);
+            setNewDocTitle('');
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '8px',
+              minWidth: '400px',
+              maxWidth: '500px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Create New Document</h2>
+            
+            <form onSubmit={handleCreateDocument}>
+              <div style={{ marginBottom: '20px' }}>
+                <label
+                  htmlFor="doc-title"
+                  style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: '500',
+                    color: '#333'
+                  }}
+                >
+                  Document Name
+                </label>
+                <input
+                  id="doc-title"
+                  type="text"
+                  value={newDocTitle}
+                  onChange={(e) => setNewDocTitle(e.target.value)}
+                  placeholder="Untitled Document"
+                  autoFocus
+                  disabled={creating}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                    opacity: creating ? 0.6 : 1
+                  }}
+                />
+              </div>
+
+              {createError && (
+                <div
+                  style={{
+                    padding: '10px',
+                    backgroundColor: '#fee',
+                    color: '#c33',
+                    borderRadius: '4px',
+                    marginBottom: '15px',
+                    fontSize: '14px'
+                  }}
+                >
+                  {createError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setNewDocTitle('');
+                    setCreateError('');
+                  }}
+                  disabled={creating}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '16px',
+                    backgroundColor: '#f1f1f1',
+                    color: '#333',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    cursor: creating ? 'not-allowed' : 'pointer',
+                    opacity: creating ? 0.6 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '16px',
+                    backgroundColor: creating ? '#ccc' : '#4285f4',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: creating ? 'not-allowed' : 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  {creating ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

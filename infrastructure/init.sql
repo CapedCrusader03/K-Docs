@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS documents (
     id TEXT PRIMARY KEY,
     data BYTEA,
+    title TEXT DEFAULT 'Untitled Document',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS user_documents (
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     document_id TEXT REFERENCES documents(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('owner', 'editor')),
+    role TEXT NOT NULL CHECK (role IN ('owner', 'editor', 'viewer')),
     PRIMARY KEY (user_id, document_id)
 );
 

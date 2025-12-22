@@ -16,13 +16,17 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    // Get title from request body, default to 'Untitled Document'
+    const { title } = req.body;
+    const documentTitle = title && title.trim() ? title.trim() : 'Untitled Document';
+
     // Generate UUID for document id
     const documentId = uuidv4();
 
     // Insert into documents table (with empty data initially)
     await pool.query(
-      'INSERT INTO documents (id, data, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)',
-      [documentId, null]
+      'INSERT INTO documents (id, data, title, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)',
+      [documentId, null, documentTitle]
     );
 
     // Insert into user_documents with role 'owner'
@@ -48,7 +52,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
     // Get all documents linked to the user
     const result = await pool.query(
-      `SELECT d.id, d.updated_at, ud.role 
+      `SELECT d.id, d.title, d.updated_at, ud.role 
        FROM documents d
        INNER JOIN user_documents ud ON d.id = ud.document_id
        WHERE ud.user_id = $1
@@ -63,12 +67,42 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// GET /api/documents/:id - Get a specific document's metadata
+router.get('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    const documentId = req.params.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Query the user_documents table joined with documents
+    const result = await pool.query(
+      `SELECT d.id, d.title, ud.role 
+       FROM documents d
+       INNER JOIN user_documents ud ON d.id = ud.document_id
+       WHERE ud.user_id = $1 AND d.id = $2`,
+      [userId, documentId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(403).json({ error: 'You do not have access to this document' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Get document error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/documents/:id/share - Share a document with another user
 router.post('/:id/share', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId;
     const documentId = req.params.id;
-    const { email } = req.body;
+    const { email, role = 'editor' } = req.body;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -76,6 +110,11 @@ router.post('/:id/share', async (req: AuthRequest, res: Response) => {
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Validate role
+    if (!['editor', 'viewer'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be "editor" or "viewer"' });
     }
 
     // Check if requester is the owner of the document
@@ -110,10 +149,10 @@ router.post('/:id/share', async (req: AuthRequest, res: Response) => {
       return res.status(409).json({ error: 'User already has access to this document' });
     }
 
-    // Insert into user_documents with role 'editor'
+    // Insert into user_documents with specified role
     await pool.query(
       'INSERT INTO user_documents (user_id, document_id, role) VALUES ($1, $2, $3)',
-      [targetUserId, documentId, 'editor']
+      [targetUserId, documentId, role]
     );
 
     res.status(200).json({ message: 'Document shared successfully' });
