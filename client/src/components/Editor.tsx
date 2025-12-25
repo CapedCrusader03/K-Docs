@@ -306,7 +306,7 @@ export const Editor = () => {
       {/* Top Navigation Bar */}
       <div style={{
         position: 'fixed',
-        top: 0,
+        top: '50px',
         left: 0,
         right: 0,
         height: '50px',
@@ -316,7 +316,7 @@ export const Editor = () => {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 20px',
-        zIndex: 1000,
+        zIndex: 999,
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -379,9 +379,9 @@ export const Editor = () => {
       </div>
 
       {/* Editor Container - positioned below fixed navigation */}
-      <div style={{ 
-        marginTop: '50px', 
-        minHeight: 'calc(100vh - 50px)',
+      <div style={{
+        marginTop: '100px',
+        minHeight: 'calc(100vh - 100px)',
         width: '100%',
         padding: '20px',
         boxSizing: 'border-box'

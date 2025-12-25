@@ -119,8 +119,8 @@ export const Dashboard = () => {
 
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1>My Documents</h1>
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ margin: '0 0 10px 0', color: '#333' }}>My Documents</h2>
         <div>
           <button 
             onClick={() => setShowCreateModal(true)}
