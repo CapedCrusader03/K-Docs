@@ -1,3 +1,7 @@
+-- Create admin database if it doesn't exist (for healthchecks and default connections)
+-- Note: This needs to be run as superuser, so it's handled by the postgres user
+-- We'll create it in a separate step
+
 -- Create documents table for storing CRDT binary state
 CREATE TABLE IF NOT EXISTS documents (
     id TEXT PRIMARY KEY,
