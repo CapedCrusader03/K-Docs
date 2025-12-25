@@ -77,7 +77,7 @@ export const Auth = () => {
       // Auto-login after successful signup
       setTimeout(async () => {
         try {
-          const loginResponse = await fetch('http://localhost:1234/api/login', {
+          const loginResponse = await fetch(`${API_BASE_URL}/api/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
