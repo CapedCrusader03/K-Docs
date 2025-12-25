@@ -53,3 +53,4 @@ postgres_data/
 *.pem
 
 !README.md
+!.env.example

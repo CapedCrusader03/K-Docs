@@ -1,13 +1,13 @@
 # K-Docs
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://docker.com)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://your-domain.com)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](http://3.239.93.189/login)
 
-**K-Docs** is a real-time collaborative document editor similar to Google Docs, built with React and TypeScript. Create, edit, and share documents with multiple users simultaneously, featuring rich text editing, user cursors, and flexible permission management.
+**K-Docs** is a real-time collaborative document editor similar to **Google Docs**, built with React and TypeScript. Create, edit, and share documents with multiple users simultaneously, featuring rich text editing, user cursors, and flexible permission management.
 
 **🌐 [Try it live](http://3.239.93.189/login)**
 
-## ✨ Features
+##  Features
 
 - **Real-time Collaboration**: Live editing with conflict-free synchronization (using CRDT)
 - **Rich Text Editor**: Full formatting support with Quill.js
@@ -20,7 +20,7 @@
 - **Persistent Storage**: PostgreSQL database
 - **Docker Ready**: Production-ready containerization
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
@@ -30,8 +30,8 @@
 
 ```bash
 # Clone and setup
-git clone <your-repo-url>
-cd k-docs
+git clone https://github.com/CapedCrusader03/K-Docs.git
+cd K-Docs
 
 # Create environment file
 cp .env.example .env
@@ -52,7 +52,7 @@ docker compose up -d --build
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-## 🏗️ Architecture
+##  Architecture
 
 **Tech Stack:**
 - **Frontend**: React 19, TypeScript, Vite, React Router
@@ -67,7 +67,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 - **Server**: Node.js API with WebSocket support
 - **Database**: PostgreSQL for data persistence
 
-## 📋 API Overview
+##  API Overview
 
 ### Authentication
 ```bash
@@ -86,26 +86,7 @@ POST   /api/documents/:id/share # Share document
 ### Real-time
 - WebSocket connection on port 1234 for live editing
 
-## ⚙️ Configuration
-
-Create `.env` file:
-
-```env
-# Database
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=your_secure_password
-POSTGRES_DB=kdocs
-
-# JWT Secret (generate secure random string)
-JWT_SECRET=your_jwt_secret_here
-
-# Client URLs
-VITE_API_BASE_URL=http://localhost:1234
-VITE_WS_BASE_URL=ws://localhost:1234
-CLIENT_PORT=3000
-```
-
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create feature branch: `git checkout -b feature/amazing-feature`
@@ -113,7 +94,7 @@ CLIENT_PORT=3000
 4. Push branch: `git push origin feature/amazing-feature`
 5. Open Pull Request
 
-## 📄 License
+##  License
 
 ISC License - see [LICENSE](LICENSE) file for details.
 
