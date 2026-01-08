@@ -1,9 +1,9 @@
-# K-Docs
+# K-Docs [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](http://44.197.196.65/login)
 
 
 **K-Docs** is a real-time collaborative document editor similar to **Google Docs**, built with React and TypeScript. Create, edit, and share documents with multiple users simultaneously, featuring rich text editing, user cursors, and flexible permission management.
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](http://44.197.196.65/login)
+<!--[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](http://44.197.196.65/login)-->
 
 ##  Features
 
